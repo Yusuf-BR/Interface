@@ -27,6 +27,25 @@ def show_assistant():
 
     if user_question:
         with st.spinner("Thinking... 🤖"):
-            answer = rag_engine.retrieve_best_answer(user_question, questions, embeddings, qa_data)
+            # ✅ Step 1: Retrieve full context (Q + A + Context + Score)
+            matched_question, matched_answer, full_context, similarity_score = rag_engine.retrieve_best_context(
+                user_question, questions, embeddings, qa_data
+            )
 
-        st.markdown(f"### 🧩 Assistant Answer:\n\n{answer}")
+            if matched_question is None:
+                final_answer = "🤖 I couldn't find a relevant answer in the knowledge base. Try rephrasing your question."
+            else:
+                # ✅ Step 2: Call LLM with context only (clean prompt)
+                final_answer = rag_engine.call_llm(full_context, user_question)
+
+        # ✅ Step 3: Display assistant answer
+        st.markdown(f"### 🧩 Assistant Answer:\n\n{final_answer}")
+
+        # ✅ Step 4: Display similarity score for traceability
+        if matched_question is not None:
+            st.info(f"Similarity Score: {similarity_score:.2f}")
+
+            # ✅ Step 5: Display retrieved Q&A separately (transparency)
+            st.markdown("### 🔎 Retrieved Q&A for Reference:")
+            st.markdown(f"**Q:** {matched_question}")
+            st.markdown(f"**A:** {matched_answer}")
